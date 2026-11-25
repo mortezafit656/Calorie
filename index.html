@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>کالری‌شمار</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="کالری‌شمار">
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:12px;background:#f3f5f4;color:#17211d;font-family:Tahoma,sans-serif;font-size:14px}
+main{max-width:640px;margin:auto}
+section{background:#fff;border-radius:12px;padding:12px;margin-bottom:12px}
+h1{font-size:20px}h2{font-size:15px;margin:0 0 8px}
+input,select,button{font:inherit;font-size:16px;padding:8px;border:1px solid #ccd5d1;border-radius:8px;width:100%;background:#fff;color:inherit}
+button{background:#147a55;color:#fff;border:0;cursor:pointer}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+label{font-size:12px;color:#5b6b64}
+.bar{height:8px;background:#e3e9e6;border-radius:4px;overflow:hidden;margin:2px 0 8px}
+.bar i{display:block;height:100%;background:#147a55}
+.item{display:flex;justify-content:space-between;gap:8px;border-top:1px solid #eee;padding:6px 0}
+.item small{color:#5b6b64;display:block}
+.item button{width:auto;background:#eee;color:#900;padding:4px 10px}
+summary{cursor:pointer;margin-bottom:8px}
+@media print{.no{display:none}body{background:#fff;padding:0}}
+</style>
+</head>
+<body><main>
+<h1>کالری‌شمار و ماکرو</h1>
+<section><h2>جمع روز</h2><div id="sum"></div></section>
+<section class="no"><h2>افزودن غذا</h2>
+<input id="q" type="search" placeholder="جستجوی غذا…" style="margin-bottom:8px">
+<div class="g"><select id="meal"><option>صبحانه</option><option>ناهار</option><option>شام</option><option>میان‌وعده</option></select><select id="food"></select></div>
+<div class="g"><input id="grams" type="number" min="1" placeholder="مقدار (گرم)"><button id="add">افزودن</button></div>
+<details><summary>غذای جدید (مقادیر در ۱۰۰ گرم)</summary>
+<input id="nn" placeholder="اسم غذا">
+<div class="g" style="margin-top:8px"><input id="nk" type="number" min="0" placeholder="کالری"><input id="np" type="number" min="0" placeholder="پروتئین"><input id="nc" type="number" min="0" placeholder="کربوهیدرات"><input id="nf" type="number" min="0" placeholder="چربی"></div>
+<button id="newf">ذخیره غذا</button></details>
+</section>
+<section><h2>وعده‌ها</h2><div id="meals"></div></section>
+<section class="no"><h2>هدف روزانه</h2>
+<div class="g"><label>کالری<input id="tk" type="number" min="0"></label><label>پروتئین<input id="tp" type="number" min="0"></label><label>کربوهیدرات<input id="tc" type="number" min="0"></label><label>چربی<input id="tf" type="number" min="0"></label></div>
+<details><summary>محاسبه پیشنهادی (بزرگسالان)</summary>
+<div class="g"><select id="sex"><option value="5">مرد</option><option value="-161">زن</option></select><input id="age" type="number" placeholder="سن"><input id="wt" type="number" placeholder="وزن (کیلو)"><input id="ht" type="number" placeholder="قد (سانت)">
+<select id="act"><option value="1.2">کم‌تحرک</option><option value="1.375">تمرین ۱ تا ۳ روز</option><option value="1.55" selected>تمرین ۳ تا ۵ روز</option><option value="1.725">تمرین ۶ تا ۷ روز</option></select>
+<select id="goal"><option value="0.85">کاهش چربی</option><option value="1" selected>حفظ وزن</option><option value="1.1">افزایش حجم</option></select></div>
+<button id="calc">محاسبه</button></details>
+</section>
+<div class="g no"><button onclick="print()">خروجی PDF</button><button id="clear">پاک کردن وعده‌ها</button></div>
+<p><small>اعداد غذاها تقریبی‌اند. محاسبه پیشنهادی جای نظر متخصص تغذیه را نمی‌گیرد.</small></p>
+</main>
+<script>
+// [name, kcal, protein, carb, fat] per 100g
+const BASE=[["سینه مرغ پخته",165,31,0,3.6],["گوشت گوساله کم‌چرب پخته",215,26,0,12],["ماهی قزل‌آلا پخته",170,24,0,7.5],["تن ماهی (آبکش‌شده)",130,28,0,1.5],["تخم‌مرغ کامل",143,12.6,0.7,9.5],["سفیده تخم‌مرغ",52,11,0.7,0.2],["برنج پخته",130,2.7,28,0.3],["ماکارونی پخته",158,5.8,31,0.9],["نان سنگک",260,9,52,1.5],["نان لواش",275,9,56,1.2],["جو دوسر خشک",389,17,66,7],["سیب‌زمینی پخته",87,1.9,20,0.1],["عدس پخته",116,9,20,0.4],["لوبیا پخته",127,8.7,23,0.5],["ماست کم‌چرب",63,5,7,1.6],["شیر کم‌چرب",42,3.4,5,1],["پنیر سفید",264,14,4,21],["موز",89,1.1,23,0.3],["سیب",52,0.3,14,0.2],["خرما",282,2.5,75,0.4],["بادام",579,21,22,50],["گردو",654,15,14,65],["روغن زیتون",884,0,0,100],["خیار و گوجه",17,0.8,3.5,0.2],["بوقلمون پخته",150,29,0,3],["ران مرغ پخته بدون پوست",190,26,0,9],["گوشت گوسفندی پخته",260,25,0,17],["جگر مرغ پخته",167,24,1,6.5],["میگو پخته",99,24,0.2,0.3],["ماهی سفید پخته",130,23,0,4],["کباب کوبیده",260,17,3,20],["جوجه کباب",170,27,2,6],["قورمه‌سبزی",150,9,6,10],["خورش قیمه",160,9,10,9],["خورش فسنجان",250,12,10,18],["عدس‌پلو",160,5,29,3],["لوبیاپلو",170,6,25,5],["آش رشته",100,4,15,3],["حلیم گندم",130,7,17,4],["میرزا قاسمی",110,3,7,8],["کشک بادمجان",160,5,9,12],["کوکو سبزی",200,8,7,16],["برنج قهوه‌ای پخته",112,2.6,23,0.9],["نان بربری",270,9,55,1.5],["نان تست سبوس‌دار",250,12,43,3.5],["بلغور گندم پخته",83,3,19,0.2],["کینوا پخته",120,4.4,21,1.9],["سیب‌زمینی شیرین پخته",90,2,21,0.2],["نخود پخته",164,9,27,2.6],["سویا خشک (پروتئین سویا)",330,50,30,1],["ماست یونانی ساده",73,10,4,2],["دوغ",30,1.7,2.5,1.5],["کشک مایع",100,10,7,3.5],["پنیر کاتیج",98,11,3.4,4.3],["شیر پرچرب",61,3.2,4.8,3.3],["پرتقال",47,0.9,12,0.1],["انگور",69,0.7,18,0.2],["هندوانه",30,0.6,8,0.2],["انار",83,1.7,19,1.2],["توت‌فرنگی",32,0.7,7.7,0.3],["کیوی",61,1.1,15,0.5],["کشمش",299,3,79,0.5],["کاهو",15,1.4,2.9,0.2],["بروکلی پخته",35,2.4,7,0.4],["اسفناج پخته",23,3,3.8,0.3],["هویج",41,0.9,10,0.2],["بادمجان پخته",35,0.8,9,0.2],["قارچ",22,3,3.3,0.3],["پسته",560,20,28,45],["بادام‌زمینی",567,26,16,49],["کره بادام‌زمینی",590,25,20,50],["ارده",595,17,21,54],["عسل",304,0.3,82,0],["شیره خرما",290,1,72,0],["زیتون",115,0.8,6,11],["کره",717,0.9,0.1,81],["پودر پروتئین وی",400,80,8,6]];
+const KEY="calmac1";
+let S={items:[],custom:[],t:{k:2200,p:140,c:250,f:70}};
+try{S=Object.assign(S,JSON.parse(localStorage.getItem(KEY))||{})}catch(e){}
+const $=id=>document.getElementById(id);
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const foods=()=>BASE.concat(S.custom);
+const fa=n=>Math.round(n).toLocaleString("fa-IR");
+const el=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e};
+const line=v=>`${fa(v[0])} کالری | پروتئین ${fa(v[1])} | کرب ${fa(v[2])} | چربی ${fa(v[3])}`;
+const total=list=>list.reduce((a,it)=>a.map((x,i)=>x+it.f[i+1]*it.g/100),[0,0,0,0]);
+function fill(){const q=$("q").value.trim();$("food").replaceChildren(...foods().map((f,i)=>{if(!f[0].includes(q))return null;const o=el("option",f[0]);o.value=i;return o}).filter(Boolean))}
+$("q").oninput=fill;
+function render(){
+ const t=total(S.items);
+ $("sum").replaceChildren(...[["کالری","k"],["پروتئین (گرم)","p"],["کربوهیدرات (گرم)","c"],["چربی (گرم)","f"]].map(([n,key],i)=>{
+  const d=el("div");d.append(el("div",`${n}: ${fa(t[i])} از ${fa(S.t[key])}`));
+  const b=el("div");b.className="bar";const x=el("i");x.style.width=Math.min(100,S.t[key]?t[i]/S.t[key]*100:0)+"%";b.append(x);d.append(b);return d}));
+ const box=$("meals");box.replaceChildren();
+ ["صبحانه","ناهار","شام","میان‌وعده"].forEach(m=>{
+  const list=S.items.filter(x=>x.m===m);if(!list.length)return;
+  box.append(el("h2",m),el("small",line(total(list))));
+  list.forEach(it=>{const row=el("div");row.className="item";const info=el("div",`${it.f[0]} — ${fa(it.g)} گرم`);info.append(el("small",line(total([it]))));
+   const del=el("button","حذف");del.className="no";del.onclick=()=>{S.items.splice(S.items.indexOf(it),1);save();render()};row.append(info,del);box.append(row)})});
+ if(!S.items.length)box.append(el("small","هنوز چیزی ثبت نشده."));
+}
+$("add").onclick=()=>{const g=+$("grams").value;if(!$("food").value)return alert("غذایی پیدا نشد");if(!(g>0))return alert("مقدار را به گرم وارد کن");S.items.push({m:$("meal").value,f:foods()[$("food").value],g});$("grams").value="";save();render()};
+$("newf").onclick=()=>{const n=$("nn").value.trim(),v=["nk","np","nc","nf"].map(i=>+$(i).value);if(!n||v.some(x=>!(x>=0)))return alert("اسم و مقادیر را درست وارد کن");S.custom.push([n,...v]);save();$("q").value="";fill();$("food").value=foods().length-1;["nn","nk","np","nc","nf"].forEach(i=>$(i).value="")};
+const T={tk:"k",tp:"p",tc:"c",tf:"f"};
+const showT=()=>Object.entries(T).forEach(([i,k])=>$(i).value=S.t[k]);
+Object.entries(T).forEach(([i,k])=>$(i).oninput=()=>{S.t[k]=Math.max(0,+$(i).value||0);save();render()});
+$("calc").onclick=()=>{const a=+$("age").value,w=+$("wt").value,h=+$("ht").value;
+ if(!(a>=18&&a<=90&&w>=35&&w<=250&&h>=130&&h<=230))return alert("سن (۱۸ به بالا)، وزن و قد را درست وارد کن");
+ const bmr=10*w+6.25*h-5*a+ +$("sex").value;
+ if($("goal").value<1&&w/(h/100)**2<18.5)return alert("با این قد و وزن، کاهش وزن پیشنهاد نمی‌شود");
+ const k=Math.round(Math.max(bmr,bmr*$("act").value*$("goal").value));
+ const p=Math.round(w*1.8),f=Math.round(k*0.25/9),c=Math.max(0,Math.round((k-p*4-f*9)/4));
+ S.t={k,p,c,f};save();showT();render()};
+$("clear").onclick=()=>{if(confirm("همه وعده‌ها پاک شود؟")){S.items=[];save();render()}};
+fill();showT();render();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");
+</script>
+</body></html>
